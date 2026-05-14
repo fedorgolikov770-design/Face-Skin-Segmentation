@@ -1,13 +1,3 @@
-"""
-Создание маски кожных покровов лица на основе ключевых точек (landmarks).
-
-Вход:  изображение (png/jpeg) с лицом человека.
-Выход: файл того же размера и формата с пикселями только кожи лица.
-
-Использование:
-    python main.py <входное_изображение> [выходное_изображение]
-"""
-
 import sys
 import cv2
 import dlib
@@ -15,7 +5,7 @@ import numpy as np
 from pathlib import Path
 
 
-# --------------- Детекция ключевых точек (Dlib) ---------------
+# Детекция ключевых точек (Dlib)
 
 def get_landmarks(img, detector, predictor):
     """Находит лицо и возвращает массив (N,2) ключевых точек."""
@@ -41,7 +31,7 @@ def extrapolate_forehead(landmarks, scale=0.6):
     return np.array(pts, dtype=np.int32)
 
 
-# --------------- Геометрическая маска лица ---------------
+# Геометрическая маска лица
 
 def build_geometric_mask(landmarks, h, w):
     """Строит маску лица: контур челюсти (0-16) + линия лба."""
@@ -58,7 +48,7 @@ def build_geometric_mask(landmarks, h, w):
     return mask
 
 
-# --------------- Цветовая фильтрация кожи ---------------
+# Цветовая фильтрация кожи
 
 def is_grayscale(img):
     """Проверяет, является ли изображение чёрно-белым (R ≈ G ≈ B)."""
@@ -103,7 +93,7 @@ def build_color_mask(img):
     return mask
 
 
-# --------------- Морфологическое рафинирование ---------------
+# Морфологическое рафинирование
 
 def morphological_refine(mask, close_k=9, open_k=5):
     """Closing заполняет дыры, Opening убирает шум."""
@@ -114,7 +104,7 @@ def morphological_refine(mask, close_k=9, open_k=5):
     return mask
 
 
-# --------------- Исключение глаз и рта ---------------
+# Исключение глаз и рта
 
 def eye_aspect_ratio(pts):
     """EAR — отношение высоты глаза к ширине. < 0.20 = закрыт."""
@@ -162,7 +152,7 @@ def exclude_eyes_mouth(mask, landmarks):
     return mask
 
 
-# --------------- Главная функция ---------------
+# Главная функция
 
 def create_skin_mask(image_path, output_path=None,
                      predictor_path="shape_predictor_81_face_landmarks.dat"):
@@ -177,7 +167,7 @@ def create_skin_mask(image_path, output_path=None,
     src = Path(image_path)
 
     if output_path is None:
-        output_path = str(src.with_name(f"{src.stem}_skin{src.suffix}"))
+        output_path = str(src.with_name(f"{src.stem}_skin.png"))
 
     # Детекция лица
     if not Path(predictor_path).exists():
@@ -208,12 +198,13 @@ def create_skin_mask(image_path, output_path=None,
     skin = cv2.GaussianBlur(skin, (5, 5), 0)
 
     # Извлечение только кожи и сохранение
-    result = cv2.bitwise_and(img, img, mask=skin)
+    result = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
+    result[:, :, 3] = skin
+    if not output_path.lower().endswith('.png'):
+        output_path = str(Path(output_path).with_suffix('.png'))
     cv2.imwrite(output_path, result)
     print(f"Готово: {output_path}")
 
-
-# --------------- Точка входа ---------------
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
