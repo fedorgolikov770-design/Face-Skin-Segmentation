@@ -1,1 +1,7 @@
-
+*.dat
+*.jpg
+*.png
+*.mov
+.venv/
+.vscode/
+.DS_Store
